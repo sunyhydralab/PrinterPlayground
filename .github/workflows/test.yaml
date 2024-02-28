@@ -22,6 +22,7 @@ jobs:
     - name: Run tests
       run: |
         python ./tests/test1.py
+        Echo "Test1 is done"
 
 
 
