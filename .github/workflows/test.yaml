@@ -22,21 +22,25 @@ jobs:
     - name: Run tests
       run: |
         python ./tests/test1.py
-        Echo "Test1 is done"
+        echo "Test1 is done"
 
 
 
-# name: Bacic Test: This is the name of your workflow. It's displayed on GitHub when the actions are running.
-# on: [push]: This specifies the event that triggers the workflow. In this case, the workflow runs whenever a push is made to the repository.
-#jobs:: This section contains all the jobs that the workflow will run. Jobs run in parallel by default.
-#test: This is the identifier for the job. You can name it anything you like.
-#runs-on: ubuntu-latest: This specifies the type of runner that the job will run on. In this case, it's the latest version of Ubuntu.
-#steps:: This section contains all the steps that the job will run. Steps run in the order that they appear in the file.
-#- uses: actions/checkout@v2: This step checks out your repository so the workflow can access its contents.
-#- name: Set up Python: This is a descriptive name for the step.
-#uses: actions/setup-python@v2: This step sets up Python on the runner. The @v2 is the version of the setup-python action to use.
-#with: python-version: '3.x': This specifies the version of Python to set up.
-#- name: Install dependencies: This is another descriptive name for the step.
+# name: Test1: This is the name of your workflow. It's displayed on GitHub when the actions are running.
+# on: [push]: This specifies the event that triggers the workflow. In this case, the workflow runs whenever a push is made to the repository. You can also include on events such as pull requests with on: [push, pull_request].
+# jobs: This section contains all the jobs that the workflow will run. Jobs run in parallel by default. I'm only including one job in this workflow.
+# test: This is the identifier for the job. You can name it anything you like.
+# runs-on: ubuntu-latest: This specifies the type of runner that the job will run on. In this case, it's the latest version of Ubuntu. You can use Windows or macOS runners as well.
+# steps:: This section contains all the steps that the job will run. Steps run in the order that they appear in the file.
+# - uses: actions/checkout@v4: This step checks out your repository so the workflow can access its contents. V4 is the latest
+# - name: Set up Python: Select python version
+# uses: actions/setup-python@v3: This step sets up Python on the runner. The @v3 is the version of the setup-python action to use.
+# with: python-version: '3.x': This specifies the version of Python to set up.
+
+# Add when you have requirements.txt file in the right place. 
+#- name: Install dependencies: This is another descriptive name for the step. 
 #run: | python -m pip install --upgrade pip pip install -r requirements.txt: This step upgrades pip and installs the Python dependencies specified in the requirements.txt file.
+
+
 #- name: Run tests: This is a descriptive name for the step.
 #run: | python -m test.py: This step runs the test.py script.
