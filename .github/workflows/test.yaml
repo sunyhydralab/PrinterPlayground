@@ -1,15 +1,13 @@
-name: Bacic Test
+name: Test1
 
 on: [push]
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
-    - name: Run test.py
+    - name: Setup Python
       uses: actions/setup-python@v3
       with:
         python-version: '3.x'
@@ -19,7 +17,8 @@ jobs:
         pip install -r requirements.txt
     - name: Run tests
       run: |
-        python -m test1.py
+        python -m unittest test1.py
+
 
 # name: Bacic Test: This is the name of your workflow. It's displayed on GitHub when the actions are running.
 # on: [push]: This specifies the event that triggers the workflow. In this case, the workflow runs whenever a push is made to the repository.
