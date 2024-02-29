@@ -6,26 +6,25 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    - name: Setup Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.x'
-#    - name: Install dependencies
-#      run: |
-#        python -m pip install --upgrade pip
-#        pip install -r requirements.txt
-    - name: Run tests
-      run: |
-        python ./tests/test1.py
-        echo "Test1 is done"
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.x"
+      #    - name: Install dependencies
+      #      run: |
+      #        python -m pip install --upgrade pip
+      #        pip install -r requirements.txt
+      - name: Run tests
+        run: |
+          python ./tests/test1.py
+          echo "Test1 is done"
 
-
-
+# Info:
 # name: Test1: This is the name of your workflow. It's displayed on GitHub when the actions are running.
 # on: [push]: This specifies the event that triggers the workflow. In this case, the workflow runs whenever a push is made to the repository. You can also include on events such as pull requests with on: [push, pull_request].
 # jobs: This section contains all the jobs that the workflow will run. Jobs run in parallel by default. I'm only including one job in this workflow.
@@ -37,10 +36,9 @@ jobs:
 # uses: actions/setup-python@v3: This step sets up Python on the runner. The @v3 is the version of the setup-python action to use.
 # with: python-version: '3.x': This specifies the version of Python to set up.
 
-# Add when you have requirements.txt file in the right place. 
-#- name: Install dependencies: This is another descriptive name for the step. 
+# Add when you have requirements.txt file in the right place.
+#- name: Install dependencies: This is another descriptive name for the step.
 #run: | python -m pip install --upgrade pip pip install -r requirements.txt: This step upgrades pip and installs the Python dependencies specified in the requirements.txt file.
-
 
 #- name: Run tests: This is a descriptive name for the step.
 #run: | python -m test.py: This step runs the test.py script.
