@@ -40,6 +40,9 @@ class Printer(db.Model):
     bed_temp = 0
     canPause = 0
     prevMes = ""
+    prevMesFilament = ""
+    prevMesCount = 0
+    didExtrude = 0
     colorbuff = 0 
     terminated = 0 
 
@@ -57,6 +60,9 @@ class Printer(db.Model):
         self.bed_temp = 0
         self.canPause = 0
         self.prevMes=""
+        self.prevMesFilament = ""
+        self.prevMesCount = 0
+        self.didExtrude = 0
         self.colorbuff=0
         self.terminated = 0 
         # self.colorChangeBuffer=0
@@ -330,12 +336,28 @@ class Printer(db.Model):
         try:
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
+
+            self.prevMesFilament = message
             # Sleep the printer to give it enough time to get the instruction.
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
+
             while True:
                 if(self.terminated==1): 
                     return 
+                
+                print("message: ", message)
+                print("PREVIOUS MESSAGE: ", self.prevMesFilament, " COUNT: ", self.prevMesCount)
+                if self.prevMesFilament in message and self.status=="printing" and self.didExtrude==1:
+                    print("PREVIOUS MESSAGE: ", self.prevMesFilament, " COUNT: ", self.prevMesCount)
+                    self.prevMesCount+=1
+                    if self.prevMesCount>=3:
+                        self.prevMesFilament=""
+                        self.prevMesCount=0
+                        # job.setTime(datetime.now(), 3)
+                        self.setStatus("colorchange")
+                        # job.setFilePause(1)
+                
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 if response == "": 
@@ -499,6 +521,7 @@ class Printer(db.Model):
 
                     if("M569" in line) and (job.getExtruded()==0):
                         job.setExtruded(1)
+                        self.didExtrude = 1
                     
                     if self.prevMes == "M602":
                         self.prevMes=""
@@ -544,8 +567,7 @@ class Printer(db.Model):
 
                     # Call the setProgress method
                     job.setProgress(progress)
-                
-                    
+
                     # if self.getStatus() == "complete" and job.extruded != 0:
                     if self.getStatus() == "complete":
                         return "cancelled"
