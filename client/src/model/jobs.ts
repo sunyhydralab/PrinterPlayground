@@ -121,6 +121,7 @@ export async function jobTime(job: Job, printers: any) {
       if (
         printer.status === 'printing' ||
         printer.status === 'colorchange' ||
+        printer.status === 'colorchange2' ||
         printer.status === 'paused'
       ) {
         const now = Date.now()

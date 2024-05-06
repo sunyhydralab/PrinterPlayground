@@ -298,9 +298,13 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                       </td>
                       <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
                       <td class="truncate" :title="job.date">{{ job.date }}</td>
-                      <td class="truncate" :title="job.status"
+                      <td class="truncate" :title="job.status == 'colorchange2' ? 'colorchange' : job.status"
                         v-if="printer.queue && printer.status == 'printing' && printer.queue?.[0].released == 0 && job.status == 'printing'">
-                        pending release</td>
+                        pending release
+                      </td>
+                      <td v-else-if="printer.status == 'colorchange2'">
+                        <span>colorchange</span>
+                      </td>
                       <td v-else>{{ job.status }}</td>
 
                       <td style="width:">

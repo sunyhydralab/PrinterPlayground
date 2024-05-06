@@ -291,7 +291,7 @@ const handleDragEnd = async () => {
           <div v-if="printer.isInfoExpanded" class="expanded-info">
             <tr :id="printer.id">
               <td
-                v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+                v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || printer.status == 'colorchange2' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
                 {{ printer.queue?.[0].td_id }}
               </td>
               <td v-else><i>idle</i></td>
@@ -307,12 +307,12 @@ const handleDragEnd = async () => {
 
               <td>
                 <div class="d-flex align-items-center justify-content-center">
-                  <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
-                Change filament
-              </p> -->
                   <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                     class="mb-0 me-2">
                     Waiting release
+                  </p>
+                  <p v-else-if="printer.status == 'colorchange2'" class="mb-0 me-2">
+                    colorchange
                   </p>
                   <p v-else class="mb-0 me-2">
                     {{ printer.status }}
@@ -321,13 +321,13 @@ const handleDragEnd = async () => {
               </td>
 
               <td class="truncate" :title="printer.queue?.[0]?.name"
-                v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+                v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || printer.status == 'colorchange2' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
                 {{ printer.queue?.[0]?.name }}
               </td>
               <td v-else></td>
 
               <td class="truncate" :title="printer.queue?.[0]?.file_name_original"
-                v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+                v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || printer.status == 'colorchange2' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
                 {{ printer.queue?.[0]?.file_name_original }}
               </td>
               <td v-else></td>
@@ -371,7 +371,7 @@ const handleDragEnd = async () => {
                   </button>
 
                   <button class="btn btn-danger" @click="setPrinterStatus(printer, 'complete')"
-                    v-if="(printer.status == 'printing' || printer.status == 'colorchange')">
+                    v-if="(printer.status == 'printing' || printer.status == 'colorchange' || printer.status == 'colorchange2')">
                     Stop
                   </button>
 
@@ -383,13 +383,16 @@ const handleDragEnd = async () => {
                   <div v-else-if="printer.status == 'colorchange' && printer.queue[0].file_pause == 0" class="mt-2">
                     Finishing current layer...
                   </div>
+                  <div v-else-if="printer.status == 'colorchange2'" class="mt-2">
+                    Filament runout detected.
+                  </div>
 
                 </div>
               </td>
 
               <td style="width: 250px;">
                 <div
-                  v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
+                  v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange' || printer.status == 'colorchange2') && printer.queue && printer.queue[0].released == 1">
                   <!-- <div v-for="job in printer.queue" :key="job.id"> -->
                   <!-- Display the elapsed time -->
                   <div class="progress" style="position: relative;">
@@ -549,26 +552,26 @@ const handleDragEnd = async () => {
               </td>
               <td class="borderless-top">
                 <span
-                  v-html="printer?.status === 'colorchange' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.elapsed_time)"></span>
+                  v-html="(printer?.status === 'colorchange' || printer.status == 'colorchange2') ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.elapsed_time)"></span>
               </td>
               <td class="borderless-top">
                 <span v-if="printer.queue[0]?.job_client?.remaining_time !== 0"
-                  v-html="printer?.status === 'colorchange' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.remaining_time)"></span>
+                  v-html="(printer?.status === 'colorchange' || printer.status == 'colorchange2') ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.remaining_time)"></span>
                 <span v-else v-html="'00:00:00'"></span>
               </td>
               <td class="borderless-top">
                 <span
-                  v-html="printer?.status === 'colorchange' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.total_time)"></span>
+                  v-html="(printer?.status === 'colorchange' || printer.status == 'colorchange2') ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.total_time)"></span>
               </td>
               <td class="borderless-top" colspan="2">
                 <span
-                  v-html="printer?.status === 'colorchange' ? 'Waiting...' : (printer.queue[0]?.extruded ? formatETA(printer.queue[0]?.job_client?.eta) : '<i>Waiting...</i>')"></span>
+                  v-html="(printer?.status === 'colorchange' || printer.status == 'colorchange2') ? 'Waiting...' : (printer.queue[0]?.extruded ? formatETA(printer.queue[0]?.job_client?.eta) : '<i>Waiting...</i>')"></span>
               </td>
             </tr>
           </div>
           <tr v-else :id="printer.id">
             <td
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || printer.status == 'colorchange2' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0].td_id }}
             </td>
             <td v-else><i>idle</i></td>
@@ -584,12 +587,12 @@ const handleDragEnd = async () => {
 
             <td>
               <div class="d-flex align-items-center justify-content-center">
-                <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
-                Change filament
-              </p> -->
                 <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                   class="mb-0 me-2">
                   Waiting release
+                </p>
+                <p v-else-if="printer.status == 'colorchange2'" class="mb-0 me-2">
+                  colorchange
                 </p>
                 <p v-else class="mb-0 me-2">
                   {{ printer.status }}
@@ -598,13 +601,13 @@ const handleDragEnd = async () => {
             </td>
 
             <td class="truncate" :title="printer.queue?.[0]?.name"
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || printer.status == 'colorchange2' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.name }}
             </td>
             <td v-else></td>
 
             <td class="truncate" :title="printer.queue?.[0]?.file_name_original"
-              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || printer.status == 'colorchange2' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.file_name_original }}
             </td>
             <td v-else></td>
@@ -647,7 +650,7 @@ const handleDragEnd = async () => {
                 </button>
 
                 <button class="btn btn-danger" @click="setPrinterStatus(printer, 'complete')"
-                  v-if="(printer.status == 'printing' || printer.status == 'colorchange')">
+                  v-if="(printer.status == 'printing' || printer.status == 'colorchange' || printer.status == 'colorchange2')">
                   Stop
                 </button>
 
@@ -659,13 +662,16 @@ const handleDragEnd = async () => {
                 <div v-else-if="printer.status == 'colorchange' && printer.queue[0].file_pause == 0" class="mt-2">
                   Finishing current layer...
                 </div>
+                <div v-else-if="printer.status == 'colorchange2'" class="mt-2">
+                  Filament runout detected.
+                </div>
 
               </div>
             </td>
 
             <td style="width: 250px;">
               <div
-                v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
+                v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange' || printer.status == 'colorchange2') && printer.queue && printer.queue[0].released == 1">
                 <!-- <div v-for="job in printer.queue" :key="job.id"> -->
                 <!-- Display the elapsed time -->
                 <div class="progress" style="position: relative;">

@@ -336,8 +336,6 @@ class Printer(db.Model):
         try:
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
-
-            self.prevMesFilament = message
             # Sleep the printer to give it enough time to get the instruction.
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
@@ -346,18 +344,22 @@ class Printer(db.Model):
                 if(self.terminated==1): 
                     return 
                 
-                print("message: ", message)
-                print("PREVIOUS MESSAGE: ", self.prevMesFilament, " COUNT: ", self.prevMesCount)
-                if self.prevMesFilament in message and self.status=="printing" and self.didExtrude==1:
-                    print("PREVIOUS MESSAGE: ", self.prevMesFilament, " COUNT: ", self.prevMesCount)
-                    self.prevMesCount+=1
-                    if self.prevMesCount>=3:
-                        self.prevMesFilament=""
-                        self.prevMesCount=0
-                        # job.setTime(datetime.now(), 3)
-                        self.setStatus("colorchange")
-                        # job.setFilePause(1)
-                
+                print("MESSAGE: ", message, "PREV MES: ", self.prevMesFilament)
+                if self.prevMesFilament in message and self.status == "printing" and self.didExtrude==1:
+                    print("PREV MES FILAMENT: ", self.prevMesFilament)
+                    if "M572" in self.prevMesFilament or "M593" in self.prevMesFilament or self.prevMesFilament == "M602":
+                        self.prevMesCount = 0
+                    else:
+                        self.prevMesCount += 1
+                        print("PREV MES COUNT: ", self.prevMesCount)
+                        if self.prevMesCount >= 3:
+                            print("INSIDE")
+                            self.setStatus("colorchange2")
+                else:
+                    self.prevMesCount = 0
+                if self.status != "colorchange1":
+                    self.prevMesFilament = message
+
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 if response == "": 
@@ -386,7 +388,7 @@ class Printer(db.Model):
                 if "ok" in response:
                     break
 
-                print(f"Command: {message}, Received: {response}")
+                # print(f"Command: {message}, Received: {response}")
         except Exception as e: 
             self.setError(e)
             return "error"
@@ -509,15 +511,15 @@ class Printer(db.Model):
                         if(self.getStatus()=="complete"):
                             return "cancelled"
                         self.setStatus("printing")
+
+                    if(self.getStatus()=="colorchange2"):
+                        job.setTime(datetime.now(), 3)
+                        job.setFilePause(1)
+                        self.setColorChangeBuffer(0)
+                        self.setStatus("printing")
                     
                     if("M600" in line):
-                        job.setTime(datetime.now(), 3)
-                        # job.setTime(job.calculateTotalTime(), 0)
-                        # job.setTime(job.updateEta(), 1)
                         self.setStatus("colorchange")
-                        # self.setColorChangeBuffer(3)
-                        # self.setColorChangeBuffer(1)
-                        job.setFilePause(1)
 
                     if("M569" in line) and (job.getExtruded()==0):
                         job.setExtruded(1)
@@ -546,18 +548,18 @@ class Printer(db.Model):
                                 break
                     
                     # software color change
-                    if (self.getStatus()=="colorchange" and job.getFilePause()==0 and self.colorbuff==1):
+                    if self.getStatus()=="colorchange" and job.getFilePause()==0 and self.colorbuff==1:
+                        self.sendGcode("M600")
                         job.setTime(datetime.now(), 3)
-                        # job.setTime(job.calculateTotalTime(), 0)
-                        # job.setTime(job.updateEta(), 1)
-                        print("SENDING COLORCHANGE")
-                        self.sendGcode("M600") # color change command
-                        job.setTime(job.colorEta(), 1)
-                        job.setTime(job.calculateColorChangeTotal(), 0)
-                        job.setTime(datetime.min, 3)
                         job.setFilePause(1)
                         self.setColorChangeBuffer(0)
                         # self.setStatus("printing")
+
+                    if self.prevMesCount >= 3:
+                        print("*******************COLOR CHANGE 2****************")
+                        job.setTime(datetime.now(), 3)
+                        job.setFilePause(1)
+                        self.setColorChangeBuffer(0)
 
                     # Increment the sent lines
                     sent_lines += 1
