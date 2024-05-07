@@ -344,10 +344,12 @@ class Printer(db.Model):
                 if(self.terminated==1): 
                     return 
                 
+                # if self.prevMesFilament=="M600" or "M74" in self.prevMesFilament:
+                #         self.prevMesFilament = ""
                 print("MESSAGE: ", message, "PREV MES: ", self.prevMesFilament)
-                if self.prevMesFilament in message and self.status == "printing" and self.didExtrude==1:
+                if self.prevMesFilament in message and self.status == "printing" and self.didExtrude==1 and self.status != "colorchange" and self.status != "colorchange2" and self.colorbuff==0:
                     print("PREV MES FILAMENT: ", self.prevMesFilament)
-                    if "M572" in self.prevMesFilament or "M593" in self.prevMesFilament or self.prevMesFilament == "M602":
+                    if "M572" in self.prevMesFilament or "M593" in self.prevMesFilament or "M74" in self.prevMesFilament or self.prevMesFilament == "M602":
                         self.prevMesCount = 0
                     else:
                         self.prevMesCount += 1
@@ -357,7 +359,7 @@ class Printer(db.Model):
                             self.setStatus("colorchange2")
                 else:
                     self.prevMesCount = 0
-                if self.status != "colorchange1":
+                if self.status != "colorchange2":
                     self.prevMesFilament = message
 
                 # logic here about time elapsed since last response
@@ -473,7 +475,7 @@ class Printer(db.Model):
                         return 
                     
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
-                    if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0):
+                    if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0) or self.status=="colorchange2":
                         self.setColorChangeBuffer(1)
 
                     # if line contains ";LAYER_CHANGE", do job.currentLayerHeight(the next line)
@@ -514,8 +516,8 @@ class Printer(db.Model):
 
                     if(self.getStatus()=="colorchange2"):
                         job.setTime(datetime.now(), 3)
-                        job.setFilePause(1)
-                        self.setColorChangeBuffer(0)
+                        # job.setFilePause(1)
+                        # self.setColorChangeBuffer(0)
                         self.setStatus("printing")
                     
                     if("M600" in line):
@@ -550,13 +552,6 @@ class Printer(db.Model):
                     # software color change
                     if self.getStatus()=="colorchange" and job.getFilePause()==0 and self.colorbuff==1:
                         self.sendGcode("M600")
-                        job.setTime(datetime.now(), 3)
-                        job.setFilePause(1)
-                        self.setColorChangeBuffer(0)
-                        # self.setStatus("printing")
-
-                    if self.prevMesCount >= 3:
-                        print("*******************COLOR CHANGE 2****************")
                         job.setTime(datetime.now(), 3)
                         job.setFilePause(1)
                         self.setColorChangeBuffer(0)
