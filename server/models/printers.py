@@ -356,6 +356,7 @@ class Printer(db.Model):
                         print("PREV MES COUNT: ", self.prevMesCount)
                         if self.prevMesCount >= 3:
                             print("INSIDE")
+                            self.prevMesCount = 0
                             self.setStatus("colorchange2")
                 else:
                     self.prevMesCount = 0
@@ -506,6 +507,7 @@ class Printer(db.Model):
                     
                     if(job.getFilePause() == 1):
                         # self.setStatus("printing")
+                        print("IS IT HERE?")
                         job.setTime(job.colorEta(), 1)
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
@@ -551,6 +553,9 @@ class Printer(db.Model):
                     
                     # software color change
                     if self.getStatus()=="colorchange" and job.getFilePause()==0 and self.colorbuff==1:
+                        print("COLOR CHANGE")
+                        print(self.getStatus())
+                        print(self.status)
                         self.sendGcode("M600")
                         job.setTime(datetime.now(), 3)
                         job.setFilePause(1)
