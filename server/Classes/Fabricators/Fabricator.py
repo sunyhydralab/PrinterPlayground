@@ -14,20 +14,7 @@ from models.db import db
 from datetime import datetime, timezone
 from globals import current_app, root_path
 
-class Fabricator(db.Model):
-    __tablename__ = "Fabricators"
-    """Fabricator class for the database. This is used for all io operations with the database, the hardware, and the front end."""
-    dbID = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(50), nullable=False)
-    hwid = db.Column(db.String(150), nullable=False)
-    name = db.Column(db.String(50), nullable=False)
-    date = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc).astimezone(),
-        nullable=False,
-    )
-    devicePort = db.Column(db.String(50), nullable=False)
-
+class Fabricator:
     def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
         """
         Initialize a new Fabricator instance.
@@ -40,31 +27,58 @@ class Fabricator(db.Model):
             return
         assert isinstance(port, ListPortInfo) or isinstance(port, SysFS), f"Invalid port type: {type(port)}"
         assert isinstance(name, str), f"Invalid name type: {type(name)}"
+        
         from Classes.Queue import Queue
+        # Define variables of the fabricator object
         self.dbID = None  # Initialize dbID
-        self.job: Job | None = None
-        self.queue: Queue = Queue()
-        self.status: str = "configuring"
+        self.job = None
+        self.queue = Queue()
+        self.status = "configuring"
         self.hwid = port.hwid.split(" LOCATION=")[0]
         self.description = "New Fabricator"
-        self.name: str = name
+        self.name = name
         self.devicePort = port.device.strip("/").split("/")[-1]
-        dbFab = Fabricator.query.filter_by(hwid=self.hwid).first()
-        if dbFab is None:
-            db.session.add(self)
-            db.session.commit()
-            self.dbID = self.dbID  # Set dbID after committing to the database
-        else:
-            self.name = dbFab.name
-            self.description = dbFab.description
-            self.hwid = dbFab.hwid
-            self.devicePort = dbFab.devicePort.strip("/").split("/")[-1]
-            self.date = dbFab.date
-            self.dbID = dbFab.dbID
-        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None, name=name)
-        if self.description == "New Fabricator": self.description = self.device.getDescription()
-        self.error = None
-        db.session.commit()
+        
+        # Check if fabricator exists in database
+        with db.get_db() as conn:
+            # Check if fabricator exists in database
+            cursor = conn.execute('SELECT * FROM Fabricators WHERE hwid = ?', (self.hwid,))
+            # set existing_fab to the first row of the query
+            existing_fab = cursor.fetchone()
+            
+            # If fabricator does not exist, add fabricator to the database
+            if existing_fab is None:
+                # Insert new fabricator
+                cursor.execute('''
+                    INSERT INTO Fabricators (description, hwid, name, devicePort, date)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (self.description, self.hwid, self.name, self.devicePort, 
+                     datetime.now(timezone.utc).astimezone()))
+                conn.commit()
+                # set the dbID to the last row id
+                self.dbID = cursor.lastrowid
+            else:
+                # Use existing fabricator data because it already exists in the database so you can just set it to the existing data
+                self.name = existing_fab['name']
+                self.description = existing_fab['description']
+                self.devicePort = existing_fab['devicePort']
+                self.dbID = existing_fab['dbID']
+
+        # Create the device object
+        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, 
+                                      addLogger=True, 
+                                      websocket_connection=next(iter(current_app.emulator_connections.values())) 
+                                      if port.device == current_app.get_emu_ports()[0] else None, 
+                                      name=name)
+        
+        # If the description is "New Fabricator", set the description to the device description
+        if self.description == "New Fabricator":
+            self.description = self.device.getDescription()
+            with db.get_db() as conn:
+                # Update the description of the fabricator in the database
+                conn.execute('UPDATE Fabricators SET description = ? WHERE dbID = ?',
+                           (self.description, self.dbID))
+                conn.commit()
 
     def __repr__(self):
         return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self, 'device') and hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if hasattr(self, 'device') and self.device and self.device.serialConnection else None}, queue: {self.queue}, job: {self.job}"
@@ -209,9 +223,13 @@ class Fabricator(db.Model):
         """
         fabList = []
         from Classes.Ports import Ports
-        for fab in cls.query.all():
-            if Ports.getPortByName(fab.devicePort) is not None:
-                fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
+        
+        # Get all fabricators from the database
+        with db.get_db() as conn:
+            cursor = conn.execute('SELECT * FROM Fabricators')
+            for fab in cursor.fetchall():
+                if Ports.getPortByName(fab['devicePort']) is not None:
+                    fabList.append(cls(Ports.getPortByName(fab['devicePort']), fab['name']))
         return fabList
 
     def begin(self, isVerbose: bool = False) -> bool:
@@ -322,7 +340,6 @@ class Fabricator(db.Model):
                 if self.job is not None:
                     self.job.status = newStatus
                     self.queue[0].status = newStatus
-                    db.session.commit()
             if current_app:
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
@@ -384,11 +401,13 @@ class Fabricator(db.Model):
         :rtype: Response
         """
         try:
-            Fabricator.query.filter_by(hwid=self.hwid).first().name = name
+            with db.get_db() as conn:
+                conn.execute('UPDATE Fabricators SET name = ? WHERE hwid = ?', 
+                           (name, self.hwid))
+                conn.commit()
             self.name = name
-            db.session.commit()
             return jsonify({"success": True, "message": "Fabricator name successfully updated.", "code": 200})
-        except SQLAlchemyError as e:
+        except Exception as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to update fabricator name. Database error", "code": 500})
 
